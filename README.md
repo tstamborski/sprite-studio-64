@@ -1,7 +1,7 @@
 # Sprite Studio 64
 Native sprite editor for Commodore 64.
 ## Short instruction / Keyboard shortcuts
-*FIRST OF ALL, IF YOU ARE USING EMULATOR, THERE IS BETTER TO USE POSITIONAL THEN SYMBOLIC KEYBOARD.*
+*IF YOU ARE USING EMULATOR THERE IS BETTER TO USE POSITIONAL THEN SYMBOLIC KEYBOARD.*
 ### DRAWING
 * **[joystick directions]** or **[CRSR]** - move the drawing cursor around
 * **[joystick fire]** or **[space]** - put choosen color in place of cursor
