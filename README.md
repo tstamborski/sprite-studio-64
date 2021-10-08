@@ -35,4 +35,6 @@ Native sprite editor for Commodore 64.
 Sprite Studio 64 is simple sprite editor for Commodore 64. It can edit up to 64 sprites and save them to PRG file on diskette.
 It is thinked for edit, exit to the BASIC, and use sprites in your short BASIC programs (for example).
 ## Screenshots
-(will be added in future)
+![Screenshot 1](screenshot-0.jpg)
+![Screenshot 2](screenshot-1.jpg)
+![Screenshot 3](screenshot-2.jpg)
