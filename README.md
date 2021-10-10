@@ -27,10 +27,11 @@ Native sprite editor for Commodore 64.
 * **[CBM+L]** - load file from diskette (device 8)
 * **[CBM+S]** - save file on diskette (device 8) - prefix filename with @: if you want to overwrite
 ### MISC
-* **[RUN/STOP]** - exit from program and return to BASIC
+* **[CBM+Q]** - exit from program and return to BASIC
 * **[G]** - switch on/off the grid mode
 * **[F]** - flip sprite horizontally (it affects the clipboard!)
 * **[Shift+F]** - flip sprite vertically (it affects the clipboard!)
+* **[E]** - switch different (brown or default black) color of overall screen background
 ## Features overview
 Sprite Studio 64 is simple sprite editor for Commodore 64. It can edit up to 64 sprites and save them to PRG file on diskette.
 It is thinked for edit, exit to the BASIC, and use sprites in your short BASIC programs (for example).

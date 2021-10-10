@@ -191,6 +191,8 @@ init
     jsr drawcanvas
     jsr drawaddress
     
+    jsr setuppreview
+    
 mainloop
     jsr readkeyboard
     jsr readjoy
@@ -238,6 +240,78 @@ loop2
     sta $d021
     rts
 .bend
+
+;------------------------------------------------
+
+setuppreview
+    ;wskaznik
+    jsr div64addr
+    sta 2040
+    
+    ;wspolrzedne
+    lda #10
+    sta $d000
+    lda $d010
+    ora #%00000001
+    sta $d010
+    lda #180
+    sta $d001
+    
+    ;single/multi color
+    lda multimode
+    cmp #0
+    bne *+13
+    lda $d01c
+    and #%11111110
+    sta $d01c
+    jmp *+11
+    lda $d01c
+    ora #%00000001
+    sta $d01c
+    
+    ;ustawic kolory
+    ldy #63
+    lda (spriteaddr),y
+    sta $d027
+    lda multi0col
+    sta $d025
+    lda multi1col
+    sta $d026
+    
+    ;enable
+    lda $d015
+    ora #%00000001
+    sta $d015
+    
+    rts
+    
+;dzieli adres obecnego sprite (spriteaddr)
+;przez 64
+;a = wynik
+div64addr
+.block
+    lda spriteaddr
+    sta scraddr
+    lda spriteaddr+1
+    sta scraddr+1
+    
+    ldx #0
+loop
+    lda scraddr
+    sec
+    sbc #64
+    inx
+    sta scraddr
+    bcs loop
+    dec scraddr+1
+    bpl loop
+    dex
+    
+    txa    
+    
+    rts
+.bend
+
 ;------------------------------------------------
 
 setupcursor
@@ -285,6 +359,9 @@ loop2
     lda $d015
     ora #%10000000
     sta $d015
+    
+    ;wypisac wspolrzedne na ekranie
+    jsr drawcoord
     
     rts
 .bend
@@ -693,6 +770,59 @@ end4
 
 ;------------------------------------------------
 
+drawcoord
+    #print coordstr, 440+27, coordstrlen, 5
+    
+    lda cursorx
+    jsr div10
+    txa
+    clc
+    adc #48
+    sta 1024+440+29
+    tya
+    clc
+    adc #48
+    sta 1024+440+30
+    
+    lda #1 ;biały
+    sta $d800+440+29
+    sta $d800+440+30
+    
+    lda cursory
+    jsr div10
+    txa
+    clc
+    adc #48
+    sta 1024+440+34
+    tya
+    clc
+    adc #48
+    sta 1024+440+35
+
+    rts
+
+;zwraca reszte i wynik dzielenia przez 10
+;dla liczby 0-99 w akumulatorze
+;x = wynik
+;y = reszta
+div10
+.block
+    ldx #0
+loop
+    sec
+    sbc #10
+    inx
+    bcs loop
+    
+    dex
+    adc #10
+    tay
+
+    rts
+.bend
+
+;------------------------------------------------
+
 drawcanvas
     lda multimode
     and #$01
@@ -999,11 +1129,6 @@ nomodifiers
     sta $dc00
     
     lda $dc01
-    and #%10000000
-    bne *+5
-    jsr reset
-    
-    lda $dc01
     and #%00010000
     bne *+5
     jsr handlespacekey
@@ -1030,6 +1155,16 @@ nomodifiers
     and #%00001000
     bne *+5
     jsr handle4key
+    
+    lda #%11111101 ;1
+    sta $dc00
+    
+    lda $dc01
+    and #%01000000
+    bne *+8
+    jsr handleekeydown
+    jmp *+6
+    jsr handleekeyup
     
     lda #%11111110 ;0
     sta $dc00
@@ -1149,6 +1284,14 @@ shifpressed ;ze shiftem
     rts
     
 cbmpressed
+    lda #%01111111 ;7
+    sta $dc00
+
+    lda $dc01
+    and #%01000000
+    bne *+5
+    jsr reset
+    
     lda #%11011111 ;5
     sta $dc00
     
@@ -1515,6 +1658,8 @@ handlef1keyup
     
     jsr drawcolorchoose
     jsr drawcanvas
+    
+    jsr setuppreview
  
     lda fkeyslock
     and #$fe
@@ -1537,6 +1682,8 @@ handlef2keyup
     jsr drawcolorchoose
     jsr drawcanvas
     
+    jsr setuppreview
+    
     lda fkeyslock
     and #$fd
     sta fkeyslock
@@ -1556,6 +1703,8 @@ handlef3keyup
     inc multi0col
     jsr drawcolorchoose
     jsr drawcanvas
+    
+    jsr setuppreview
  
     lda fkeyslock
     and #$fb
@@ -1576,6 +1725,8 @@ handlef4keyup
     jsr drawcolorchoose
     jsr drawcanvas
     
+    jsr setuppreview
+    
     lda fkeyslock
     and #$f7
     sta fkeyslock
@@ -1595,6 +1746,8 @@ handlef5keyup
     inc multi1col
     jsr drawcolorchoose
     jsr drawcanvas
+    
+    jsr setuppreview
  
     lda fkeyslock
     and #$ef
@@ -1614,6 +1767,8 @@ handlef6keyup
     dec multi1col
     jsr drawcolorchoose
     jsr drawcanvas
+    
+    jsr setuppreview
     
     lda fkeyslock
     and #$df
@@ -1705,6 +1860,8 @@ handlemkeyup
     jsr drawcanvas
     jsr setupcursor
     
+    jsr setuppreview
+    
     lda mkeylock
     and #$fe
     sta mkeylock
@@ -1792,6 +1949,37 @@ fend
 
 ;------------------------------------------------
 
+handleekeydown
+    lda ekeylock
+    ora #$01
+    sta ekeylock
+    rts
+handleekeyup
+.block
+    lda ekeylock
+    and #$01
+    bne *+3
+    rts
+    
+    lda lightmode
+    eor #$01
+    sta lightmode
+    cmp #0
+    bne *+10
+    lda #0
+    sta $d021
+    jmp *+8
+    lda #9
+    sta $d021
+    
+    lda ekeylock
+    and #$fe
+    sta ekeylock
+    rts
+.bend
+
+;------------------------------------------------
+
 handlepluskeydown
     lda pluskeylock
     ora #$01
@@ -1841,6 +2029,8 @@ handlepluskeyup
     
     jsr drawaddress
     jsr drawcanvas
+    
+    jsr setuppreview
     
 funcend
     lda pluskeylock
@@ -1898,6 +2088,8 @@ handleminuskeyup
     
     jsr drawaddress
     jsr drawcanvas
+    
+    jsr setuppreview
     
 funcend
     lda minuskeylock
@@ -1961,6 +2153,8 @@ handlecbmlkeyup
     
     jsr drawaddress
     jsr drawcanvas
+    
+    jsr setuppreview
 
     lda cbmlkeylock
     and #$fe
@@ -2117,6 +2311,8 @@ loop
     jsr correctcolchoose
     
     jsr drawcanvas
+    
+    jsr setuppreview
 
 fend
     lda cbmvkeylock
@@ -2156,7 +2352,6 @@ handlefkeyup
     bne *+3
     rts
     
-    ;TODO
     lda spriteaddr
     sta scraddr
     lda spriteaddr+1
@@ -2914,6 +3109,8 @@ multimode
     .byte $01
 gridmode
     .byte $00
+lightmode
+    .byte $00
     
 addrindex ;wartosc bcd x*64=adres sprite
     .byte $92, $01
@@ -2960,6 +3157,8 @@ gkeylock
 fkeylock ;flip horizontal
     .byte $00
 shiftfkeylock ;flip vertical
+    .byte $00
+ekeylock ;"light" mode
     .byte $00
 pluskeylock
     .byte $00
@@ -3028,13 +3227,17 @@ addrstr
     .screen "address:"
 addrstrlen
     .byte *-addrstr
+coordstr
+    .screen "x:   y:"
+coordstrlen
+    .byte *-coordstr
     
 prgnamestr
     .screen "sprite studio 64"
 prgnamestrlen
     .byte *-prgnamestr
 versionstr
-    .screen "ver. 0.5 (alpha3)"
+    .screen "ver. 0.6 (beta1)"
 versionstrlen
     .byte *-versionstr
 copyleftstr
