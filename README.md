@@ -2,7 +2,7 @@
 Native sprite editor for Commodore 64.
 ## Overview
 Sprite Studio 64 is native sprite editor for Commodore 64 computer.
-It's made with simplicity and minimalism, however it doesn't mean lack of most important features.
+It is made with simplicity and minimalism.
 Sprite Studio 64 can edit simultaneously 64 sprites - only 64 but it has also some tools for animating them and sprite overlay.
 It can save your work on diskette in PRG file - this files can be loaded by basic LOAD command or be embedded in assembly source code.
 ## Short instruction / Keyboard shortcuts
