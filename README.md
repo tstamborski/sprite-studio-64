@@ -56,4 +56,5 @@ For building from source, you can use shipped make.bat batch file, but you will 
 * **TMPx** assembler.
 * **cc1541** tool for creating commodore floppy images.
 * **Exomizer** cruncher - for packaging/zipping prg files.
+
 If you want to use run.bat and runhelp.bat it will be nice to have **VICE** x64.exe somewhere in PATH too.
