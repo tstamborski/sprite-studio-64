@@ -88,6 +88,7 @@ keytimermax = $80
 spacetimer = 0
 updowntimer = 1
 leftrighttimer = 2
+functiontimer = 3
 ;numer keytimer'a
 handlekeytimer .macro
     dec keytimer+\1
@@ -163,14 +164,682 @@ drawprgicon .macro
 
     *=$801
 basicstart
-    .byte $0C,$08,$0A,$00,$9E,$20,$32,$30,$36,$34,$00,$00,$00
+    .byte $0C,$08,$0A,$00,$9E,$20,$31,$36,$33,$38,$34,$00,$00,$00
+    
+;------------------------------------------------
+;------------------------------------------------
+;$1000
+;MUSIC
+
+    *=$1000
+    .offs $1000-*
+    
+music
+    .binary "Blade_Runner.dat",2
+    
+;------------------------------------------------
+;------------------------------------------------
+;zestaw niestandardowych znakow dla programu
+
+    *=$2000
+    .offs $2000-*
+    .binary "sprite-studio-chars.raw"
+    .binary "sprite-studio-chars-rev.raw"
+    
+;------------------------------------------------
+;------------------------------------------------
+;sprite'y na uzytek samego programu
+
+    *=$2800
+    .offs $2800-*
+    
+cursorsprite
+    .binary "cursor-sprites.raw"
+    
+;------------------------------------------------
+;------------------------------------------------
+;ZMIENNE
+
+clipboard ;trzymac tutaj wyrownane do 64 bajtow
+    .repeat 64, $00
+clipflag
+    .byte $00
+
+cursorx
+    .byte $00
+cursory
+    .byte $00
+
+multimode
+    .byte $01
+gridmode
+    .byte $00
+lightmode
+    .byte $00
+    
+animationmode
+    .byte $01
+overlaymode
+    .byte $01
+addrlock
+    .byte $00
+sprite0base
+    .byte $c0
+sprite1base
+    .byte $c0
+sprite2base
+    .byte $c0
+sprite3base
+    .byte $c0
+animtimer
+    .byte animtimermax
+    
+addrindex ;wartosc bcd x*64=adres sprite
+    .byte $92, $01
+
+spritecol
+    .byte $02
+multi0col
+    .byte $0f
+multi1col
+    .byte $01
+bkgndcol
+    .byte $00
+    
+curcol ;spojrz stale na poczatku
+    .byte $02
+
+spriteindex
+    .byte $00
+spritebyte
+    .byte $00
+tmpbyte
+    .byte $00,$00,$00
+bitmask
+    .byte $00
+bitcounter
+    .byte $00
+counter3 ;żeby zliczać do trzech we funkcji 
+    .byte $00 ;drawcanvasmulti i drawcanvassingle
+    
+canvaschar0 ;dla trybu single color
+    .byte 160
+;dwa znaki dla trybu multi color
+canvaschar1
+    .byte 160
+canvaschar2
+    .byte 160
+    
+mkeylock
+    .byte $00
+gkeylock
+    .byte $00
+fkeylock ;flip horizontal
+    .byte $00
+shiftfkeylock ;flip vertical
+    .byte $00
+ekeylock ;"light" mode
+    .byte $00
+pluskeylock
+    .byte $00
+minuskeylock
+    .byte $00
+akeylock
+    .byte $00
+shiftakeylock
+    .byte $00
+okeylock
+    .byte $00
+shiftokeylock
+    .byte $00
+lkeylock
+    .byte $00
+cbmlkeylock ;load
+    .byte $00
+cbmskeylock ;save
+    .byte $00
+cbmdkeylock ;disk dir view
+    .byte $00
+cbmxkeylock ;cut
+    .byte $00
+cbmckeylock ;copy
+    .byte $00
+cbmvkeylock ;paste
+    .byte $00
+cbmcommakeylock ;slide left
+    .byte $00
+cbmperiodkeylock ;slide right
+    .byte $00
+cbmcolonkeylock ;slide down
+    .byte $00
+cbmapekeylock ;slide up
+    .byte $00
+keytimer
+    .repeat 4, keytimermax
+    
+filename
+    .repeat 22, $00
+filenamelen
+    .byte $00
+
+notstudio64str
+    .screen "error: not a sprite studio 64 file      "
+nodevstr
+    .screen "error: device not present               "
+invalidstr
+    .screen "error: maybe invalid file               "
+cantwritestr
+    .screen "error: error while writing to file      "
+emptystr
+    .screen "                                        "
+errormsglen
+    .byte *-emptystr
+getfilestr
+    .screen "filename: "
+getfilestrlen
+    .byte *-getfilestr
+    
+spritestr
+    .screen "sprite color "
+spritestrlen
+    .byte *-spritestr
+multi0str
+    .screen "multi-0 color"
+multi0strlen
+    .byte *-multi0str
+multi1str
+    .screen "multi-1 color"
+multi1strlen
+    .byte *-multi1str
+bkgndstr
+    .screen "bkgnd color  "
+bkgndstrlen
+    .byte *-bkgndstr
+modestr
+    .screen "multicolor: "
+modestrlen
+    .byte *-modestr
+gridstr
+    .screen "grid:       "
+gridstrlen
+    .byte *-gridstr
+addrstr
+    .screen "address:"
+addrstrlen
+    .byte *-addrstr
+coordstr
+    .screen "x:   y:"
+coordstrlen
+    .byte *-coordstr
+animationstr
+    .screen "animation:"
+animationstrlen
+    .byte *-animationstr
+overlaystr
+    .screen "overlay:"
+overlaystrlen
+    .byte *-overlaystr
+lockstr
+    .screen "addr lock:"
+lockstrlen
+    .byte *-lockstr
+    
+prgnamestr
+    .screen "sprite studio 64"
+prgnamestrlen
+    .byte *-prgnamestr
+versionstr
+    .screen "ver. 1.0"
+versionstrlen
+    .byte *-versionstr
+copyleftstr
+    .screen "(c) 2023 by tobiasz stamborski"
+copyleftstrlen
+    .byte *-copyleftstr
+musicstr
+    .screen "music by raik picheta"
+musicstrlen
+    .byte *-musicstr
+advocacystr
+    .screen "pocket knife among sprite editors!"
+advocacystrlen
+    .byte *-advocacystr
+splashinfostr
+    .screen "hit space to continue"
+splashinfostrlen
+    .byte *-splashinfostr
+
+;------------------------------------------------
+;------------------------------------------------
+;dodatkowe miejsce na kod dodatkowych
+;funkcji programu
+
+handlecbmcolonkeydown
+    lda cbmcolonkeylock
+    ora #$01
+    sta cbmcolonkeylock
+    rts
+handlecbmcolonkeyup ;slide down
+.block
+    lda cbmcolonkeylock
+    and #$01
+    bne *+3
+    rts
+    
+    lda spriteaddr
+    sta scraddr
+    lda spriteaddr+1
+    sta scraddr+1
+    lda #<clipboard
+    sta coladdr
+    lda #>clipboard
+    sta coladdr+1
+    
+    ldx #0
+    lda coladdr
+    clc
+    adc #3
+    sta coladdr
+loop1major
+    ldy #0
+loop1minor
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    cpy #3
+    bne loop1minor
+    
+    lda scraddr
+    clc
+    adc #3
+    sta scraddr
+    lda coladdr
+    clc
+    adc #3
+    sta coladdr
+    inx
+    cpx #20
+    bne loop1major
+    
+    lda #<clipboard
+    sta coladdr
+    lda #>clipboard
+    sta coladdr+1
+    ldy #0
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    lda (scraddr),y
+    sta (coladdr),y
+    
+    ldy #0
+loop2
+    lda clipboard,y
+    sta (spriteaddr),y
+    iny
+    cpy #63
+    bne loop2
+    
+    jsr drawcanvas
+    
+    lda cbmcolonkeylock
+    and #$fe
+    sta cbmcolonkeylock
+    rts
+.bend
+    
+handlecbmapekeydown
+    lda cbmapekeylock
+    ora #$01
+    sta cbmapekeylock
+    rts
+handlecbmapekeyup ;slideup
+.block
+    lda cbmapekeylock
+    and #$01
+    bne *+3
+    rts
+    
+    lda spriteaddr
+    sta scraddr
+    lda spriteaddr+1
+    sta scraddr+1
+    lda #<clipboard
+    sta coladdr
+    lda #>clipboard
+    sta coladdr+1
+    
+    lda coladdr
+    clc
+    adc #60
+    sta coladdr
+    ldy #0
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    lda (scraddr),y
+    sta (coladdr),y
+    
+    lda #<clipboard
+    sta coladdr
+    lda #>clipboard
+    sta coladdr+1
+    ldx #0
+    lda scraddr
+    clc
+    adc #3
+    sta scraddr
+loop1major
+    ldy #0
+loop1minor
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    cpy #3
+    bne loop1minor
+    
+    lda scraddr
+    clc
+    adc #3
+    sta scraddr
+    lda coladdr
+    clc
+    adc #3
+    sta coladdr
+    inx
+    cpx #20
+    bne loop1major
+    
+    ldy #0
+loop2
+    lda clipboard,y
+    sta (spriteaddr),y
+    iny
+    cpy #63
+    bne loop2
+    
+    jsr drawcanvas
+    
+    lda cbmapekeylock
+    and #$fe
+    sta cbmapekeylock
+    rts
+.bend
+
+slideleft
+.block
+    lda spriteaddr
+    sta scraddr
+    lda spriteaddr+1
+    sta scraddr+1
+    
+    ldx #0
+loop
+    lda #0
+    sta tmpbyte
+    sta tmpbyte+1
+    sta tmpbyte+2
+    ldy #0
+    lda (scraddr),y
+    clc
+    asl
+    sta (scraddr),y
+    bcc *+7
+    lda #1
+    sta tmpbyte
+    iny
+    lda (scraddr),y
+    clc
+    asl
+    sta (scraddr),y
+    bcc *+7
+    lda #1
+    sta tmpbyte+1
+    iny
+    lda (scraddr),y
+    clc
+    asl
+    sta (scraddr),y
+    bcc *+7
+    lda #1
+    sta tmpbyte+2
+    
+    ;y=2
+    lda (scraddr),y
+    ora tmpbyte
+    sta (scraddr),y
+    dey
+    lda (scraddr),y
+    ora tmpbyte+2
+    sta (scraddr),y
+    dey
+    lda (scraddr),y
+    ora tmpbyte+1
+    sta (scraddr),y
+    
+    clc
+    lda scraddr
+    adc #3
+    sta scraddr
+    inx
+    cpx #21
+    bne loop
+    
+    rts
+.bend
+
+slideright
+.block
+    lda spriteaddr
+    sta scraddr
+    lda spriteaddr+1
+    sta scraddr+1
+    
+    ldx #0
+loop
+    lda #0
+    sta tmpbyte
+    sta tmpbyte+1
+    sta tmpbyte+2
+    ldy #0
+    lda (scraddr),y
+    clc
+    lsr
+    sta (scraddr),y
+    bcc *+7
+    lda #128
+    sta tmpbyte
+    iny
+    lda (scraddr),y
+    clc
+    lsr
+    sta (scraddr),y
+    bcc *+7
+    lda #128
+    sta tmpbyte+1
+    iny
+    lda (scraddr),y
+    clc
+    lsr
+    sta (scraddr),y
+    bcc *+7
+    lda #128
+    sta tmpbyte+2
+    
+    ;y=2
+    lda (scraddr),y
+    ora tmpbyte+1
+    sta (scraddr),y
+    dey
+    lda (scraddr),y
+    ora tmpbyte
+    sta (scraddr),y
+    dey
+    lda (scraddr),y
+    ora tmpbyte+2
+    sta (scraddr),y
+    
+    clc
+    lda scraddr
+    adc #3
+    sta scraddr
+    inx
+    cpx #21
+    bne loop
+    
+    rts
+.bend
+    
+handlecbmcommakeydown
+    lda cbmcommakeylock
+    ora #$01
+    sta cbmcommakeylock
+    rts
+handlecbmcommakeyup ;slideup
+.block
+    lda cbmcommakeylock
+    and #$01
+    bne *+3
+    rts
+    
+    jsr slideleft
+    lda multimode
+    beq *+5
+    jsr slideleft
+    
+    jsr drawcanvas
+    
+    lda cbmcommakeylock
+    and #$fe
+    sta cbmcommakeylock
+    rts
+.bend
+
+handlecbmperiodkeydown
+    lda cbmperiodkeylock
+    ora #$01
+    sta cbmperiodkeylock
+    rts
+handlecbmperiodkeyup ;slideup
+.block
+    lda cbmperiodkeylock
+    and #$01
+    bne *+3
+    rts
+    
+    jsr slideright
+    lda multimode
+    beq *+5
+    jsr slideright
+    
+    jsr drawcanvas
+    
+    lda cbmperiodkeylock
+    and #$fe
+    sta cbmperiodkeylock
+    rts
+.bend
+
+disablepreview
+    lda #$80
+    sta $d015
+    rts
+    
+setupmusic
+    sei
+    lda #$00
+    jsr music
+    cli
+    rts
+    
+setupirqstd
+    sei
+    
+    lda #%01111111
+    sta $dc0d
+    sta $dd0d
+    
+    and $d011
+    sta $d011
+    
+    lda $dc0d
+    lda $dd0d
+    
+    lda #210
+    sta $D012
+
+    lda #<irqstd
+    sta $0314
+    lda #>irqstd
+    sta $0315
+
+    lda #%00000001
+    sta $D01A
+    
+    cli
+    rts
+    
+setupirqkblisten
+    sei
+    
+    lda #%01111111
+    sta $dc0d
+    sta $dd0d
+    
+    and $d011
+    sta $d011
+    
+    lda $dc0d
+    lda $dd0d
+    
+    lda #210
+    sta $D012
+
+    lda #<irqkblisten
+    sta $0314
+    lda #>irqkblisten
+    sta $0315
+
+    lda #%00000001
+    sta $D01A
+    
+    cli
+    rts
+    
+irqstd
+    jsr music+3
+
+    asl $d019
+    jmp $ea81
+    
+irqkblisten
+    jsr music+3
+
+    asl $d019
+    jmp $ea31
+
+;------------------------------------------------
+;------------------------------------------------
+;$3000 - $4000
+;IS SPRITE BANK
+
+    *=$3000
+    .offs $3000-*
+    
+    .binary "default-spritebank.raw"
     
 ;------------------------------------------------
 ;------------------------------------------------
 ; GŁÓWNY KOD PROGRAMU
 
-    *=$810
-    .offs $810-*
+    *=$4000
+    .offs $4000-*
     
 init
     lda #0
@@ -186,12 +855,13 @@ init
     
     jsr showsplash ;splash screen
     
-    ;jsr setupmem ;wyczyscic sprite bank
-    
     jsr clrscr
     
     jsr draweditborder
     jsr setupall
+    
+    jsr setupmusic
+    jsr setupirqstd
     
 mainloop
     jsr readkeyboard
@@ -217,8 +887,9 @@ showsplash
     #print prgnamestr,(40*4)+9, prgnamestrlen,0
     #print versionstr,(40*6)+9, versionstrlen,0
     #print copyleftstr,(40*8)+9, copyleftstrlen,0
+    #print musicstr,(40*10)+9, musicstrlen,0
     
-    #print advocacystr,(40*13)+3, advocacystrlen,0
+    #print advocacystr,(40*16)+3, advocacystrlen,0
     
     #print splashinfostr,(40*23)+9, splashinfostrlen,0
     
@@ -1330,7 +2001,8 @@ drawend
 
 readkeyboard
 .block
-    sei
+    ;sei
+    
     lda #%11111111
     sta $dc02
     lda #%00000000
@@ -1489,31 +2161,23 @@ nomodifiers
     
     lda $dc01
     and #%00010000
-    bne *+8
+    bne *+5
     jsr handlef1keydown
-    jmp *+6
-    jsr handlef1keyup
     
     lda $dc01
     and #%00100000
-    bne *+8
+    bne *+5
     jsr handlef3keydown
-    jmp *+6
-    jsr handlef3keyup
     
     lda $dc01
     and #%01000000
-    bne *+8
+    bne *+5
     jsr handlef5keydown
-    jmp *+6
-    jsr handlef5keyup
     
     lda $dc01
     and #%00001000
-    bne *+8
+    bne *+5
     jsr handlef7keydown
-    jmp *+6
-    jsr handlef7keyup
     
     cli
     rts
@@ -1577,31 +2241,23 @@ shifpressed ;ze shiftem
     
     lda $dc01
     and #%00010000
-    bne *+8
+    bne *+5
     jsr handlef2keydown
-    jmp *+6
-    jsr handlef2keyup
     
     lda $dc01
     and #%00100000
-    bne *+8
+    bne *+5
     jsr handlef4keydown
-    jmp *+6
-    jsr handlef4keyup
     
     lda $dc01
     and #%01000000
-    bne *+8
+    bne *+5
     jsr handlef6keydown
-    jmp *+6
-    jsr handlef6keyup
     
     lda $dc01
     and #%00001000
-    bne *+8
+    bne *+5
     jsr handlef8keydown
-    jmp *+6
-    jsr handlef8keyup
 
     cli
     rts
@@ -1665,6 +2321,13 @@ cbmpressed
     
     lda #%11111011 ;2
     sta $dc00
+    
+    lda $dc01
+    and #%00000100
+    bne *+8
+    jsr handlecbmdkeydown
+    jmp *+6
+    jsr handlecbmdkeyup
     
     lda $dc01
     and #%10000000
@@ -1994,161 +2657,65 @@ handle4key
 ;------------------------------------------------
     
 handlef1keydown
-    lda fkeyslock
-    ora #$01
-    sta fkeyslock
-    rts
-handlef1keyup
-    lda fkeyslock
-    and #$01
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     inc spritecol
     jsr writespritecol
-    
     jsr setupall
  
-    lda fkeyslock
-    and #$fe
-    sta fkeyslock
     rts
 handlef2keydown
-    lda fkeyslock
-    ora #$02
-    sta fkeyslock
-    rts
-handlef2keyup
-    lda fkeyslock
-    and #$02
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     dec spritecol
     jsr writespritecol
-    
     jsr setupall
     
-    lda fkeyslock
-    and #$fd
-    sta fkeyslock
     rts
     
 handlef3keydown
-    lda fkeyslock
-    ora #$04
-    sta fkeyslock
-    rts
-handlef3keyup
-    lda fkeyslock
-    and #$04
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     inc multi0col
-    
     jsr setupall
- 
-    lda fkeyslock
-    and #$fb
-    sta fkeyslock
+    
     rts
 handlef4keydown
-    lda fkeyslock
-    ora #$08
-    sta fkeyslock
-    rts
-handlef4keyup
-    lda fkeyslock
-    and #$08
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     dec multi0col
-    
     jsr setupall
     
-    lda fkeyslock
-    and #$f7
-    sta fkeyslock
     rts
     
 handlef5keydown
-    lda fkeyslock
-    ora #$10
-    sta fkeyslock
-    rts
-handlef5keyup
-    lda fkeyslock
-    and #$10
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     inc multi1col
-    
     jsr setupall
- 
-    lda fkeyslock
-    and #$ef
-    sta fkeyslock
+
     rts
 handlef6keydown
-    lda fkeyslock
-    ora #$20
-    sta fkeyslock
-    rts
-handlef6keyup
-    lda fkeyslock
-    and #$20
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     dec multi1col
-    
     jsr setupall
-    
-    lda fkeyslock
-    and #$df
-    sta fkeyslock
+
     rts
     
 handlef7keydown
-    lda fkeyslock
-    ora #$40
-    sta fkeyslock
-    rts
-handlef7keyup
-    lda fkeyslock
-    and #$40
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     inc bkgndcol
-    
     jsr setupall
- 
-    lda fkeyslock
-    and #$bf
-    sta fkeyslock
+
     rts
 handlef8keydown
-    lda fkeyslock
-    ora #$80
-    sta fkeyslock
-    rts
-handlef8keyup
-    lda fkeyslock
-    and #$80
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     dec bkgndcol
-    
     jsr setupall
     
-    lda fkeyslock
-    and #$7f
-    sta fkeyslock
     rts
     
 writespritecol
@@ -2567,6 +3134,97 @@ handlelkeyup
 .bend
 
 ;------------------------------------------------
+;funkcje wczytywania/zapisywania na dyskietce
+
+handlecbmdkeydown
+    lda cbmdkeylock
+    ora #$01
+    sta cbmdkeylock
+    rts
+handlecbmdkeyup
+.block
+    lda cbmdkeylock
+    and #$01
+    bne *+3
+    rts
+
+    lda #$00
+    sta $d015 ;wylaczyc sprite'y
+    lda #"$"
+    sta filename
+    
+    ;kod zerzniety z forum csdb.dk (z lekkimi wlasnymi zmianami)
+    ;z postu uzytkownika iAN CooG - thank you :)
+    JSR $E544      ;clear screen
+    lda #$1e       ;tekst na zielono
+    jsr chrout
+    LDA #$01
+    LDX #<filename
+    LDY #>filename
+    JSR $FFBD      ; set filename "$"
+    LDA #$08
+    STA $BA        ; device #8
+    LDA #$60
+    STA $B9        ; secondary chn
+    JSR $F3D5      ; open for serial bus devices
+    JSR $F219      ; set input device
+    LDY #$04
+labl1
+    inc $d020
+    JSR $EE13      ; input byte on serial bus
+    DEY
+    BNE labl1      ; get rid of Y bytes
+    LDA $C6        ; key pressed?
+    ORA $90        ; or EOF?
+    BNE labl2      ; if yes exit
+    inc $d020
+    JSR $EE13      ; now get in AX the dimension
+    TAX            ; of the file
+    inc $d020
+    JSR $EE13
+    JSR $BDCD      ; print number from AX
+    lda #" "
+    jsr chrout     ;spacja po numerze linii
+labl3
+    inc $d020
+    JSR $EE13      ; now the filename
+    JSR $E716      ; put a character to screen
+    BNE labl3      ; while not 0 encountered
+    JSR $AAD7      ; put a CR , end line
+    LDY #$02       ; set 2 bytes to skip
+    BNE labl1      ; repeat
+labl2
+    JSR $F642      ; close serial bus device
+    JSR $F6F3      ; restore I/O devices to default
+    lda #0
+    sta $d020
+
+    #print splashinfostr, (40*24), splashinfostrlen, 1
+    
+    lda #%11111111
+    sta $dc02
+    lda #%00000000
+    sta $dc03
+w8space1
+    lda #%01111111 ;7
+    sta $dc00
+    lda $dc01
+    and #%00010000 ;spacja
+    bne w8space1
+w8space2
+    lda $dc01
+    and #%00010000 ;spacja
+    beq w8space2
+
+    jsr clrscr
+    jsr draweditborder
+    jsr setupall
+
+    lda cbmdkeylock
+    and #$fe
+    sta cbmdkeylock
+    rts
+.bend
 
 handlecbmlkeydown
     lda cbmlkeylock
@@ -3123,6 +3781,8 @@ readjoy
 
 getfilename
 .block
+    jsr setupirqkblisten
+
     #print getfilestr,(40*23),getfilestrlen,5
 
     ldx #23
@@ -3178,9 +3838,11 @@ del
     jsr chrout
     jmp get
 end
+    jsr setupirqstd
     lda #0
     rts
 cancel
+    jsr setupirqstd
     lda #1
     rts
 .bend
@@ -3236,7 +3898,7 @@ savefile
     beq *+5
     jmp errorwrite
     
-    .block
+.block
     lda #<bankmin
     sta dataaddr
     lda #>bankmin
@@ -3259,7 +3921,7 @@ minorloop
     bne majorloop
 .bend
     
-    jmp loadend ;takie same jak i saveend
+    jmp loadend ;takie same jak i "saveend"
 
 loadfile
     lda #0
@@ -3307,6 +3969,8 @@ loadfile
     cmp #>bankmin
     beq *+5
     jmp errornotstudio64
+    
+    jsr disablepreview
 
 .block
     lda #<bankmin
@@ -3342,6 +4006,8 @@ loadend
     
     lda #0
     sta $d020
+    
+    jsr setuppreview
 
     rts
     
@@ -3458,42 +4124,6 @@ colloop
 .bend    
 
 ;------------------------------------------------
-.if 0
-
-setupmem
-.block
-    lda #<bankmin
-    sta dataaddr
-    lda #>bankmin
-    sta dataaddr+1
-    
-    ldx #0
-majorloop
-    ldy #0
-minorloop
-    lda #0
-    sta (dataaddr),y
-    iny
-    cpy #63
-    bne minorloop
-    
-    lda #$e5
-    sta (dataaddr),y
-    clc
-    lda dataaddr
-    adc #$40
-    sta dataaddr
-    bcc *+4
-    inc dataaddr+1
-    inx
-    cpx #64
-    bne majorloop
-    
-    rts
-.bend
-
-.endif
-;------------------------------------------------
     
 initcharset
     ;zapisac adres ekranu i charsetu
@@ -3501,579 +4131,4 @@ initcharset
     sta $d018
 
     rts
-    
-;------------------------------------------------
-;------------------------------------------------
-;zestaw niestandardowych znakow dla programu
-
-    *=$2000
-    .offs $2000-*
-    .binary "sprite-studio-chars.raw"
-    .binary "sprite-studio-chars-rev.raw"
-    
-;------------------------------------------------
-;------------------------------------------------
-;sprite'y na uzytek samego programu
-
-    *=$2800
-    .offs $2800-*
-    
-cursorsprite
-    .binary "cursor-sprites.raw"
-    
-;------------------------------------------------
-;------------------------------------------------
-;ZMIENNE
-
-clipboard ;trzymac tutaj wyrownane do 64 bajtow
-    .repeat 64, $00
-clipflag
-    .byte $00
-
-cursorx
-    .byte $00
-cursory
-    .byte $00
-
-multimode
-    .byte $01
-gridmode
-    .byte $00
-lightmode
-    .byte $00
-    
-animationmode
-    .byte $01
-overlaymode
-    .byte $01
-addrlock
-    .byte $00
-sprite0base
-    .byte $c0
-sprite1base
-    .byte $c0
-sprite2base
-    .byte $c0
-sprite3base
-    .byte $c0
-animtimer
-    .byte animtimermax
-    
-addrindex ;wartosc bcd x*64=adres sprite
-    .byte $92, $01
-
-spritecol
-    .byte $02
-multi0col
-    .byte $0f
-multi1col
-    .byte $01
-bkgndcol
-    .byte $00
-    
-curcol ;spojrz stale na poczatku
-    .byte $02
-
-spriteindex
-    .byte $00
-spritebyte
-    .byte $00
-tmpbyte
-    .byte $00,$00,$00
-bitmask
-    .byte $00
-bitcounter
-    .byte $00
-counter3 ;żeby zliczać do trzech we funkcji 
-    .byte $00 ;drawcanvasmulti i drawcanvassingle
-    
-canvaschar0 ;dla trybu single color
-    .byte 160
-;dwa znaki dla trybu multi color
-canvaschar1
-    .byte 160
-canvaschar2
-    .byte 160
-    
-fkeyslock ;klawisze F1-F8
-    .byte %00000000
-mkeylock
-    .byte $00
-gkeylock
-    .byte $00
-fkeylock ;flip horizontal
-    .byte $00
-shiftfkeylock ;flip vertical
-    .byte $00
-ekeylock ;"light" mode
-    .byte $00
-pluskeylock
-    .byte $00
-minuskeylock
-    .byte $00
-akeylock
-    .byte $00
-shiftakeylock
-    .byte $00
-okeylock
-    .byte $00
-shiftokeylock
-    .byte $00
-lkeylock
-    .byte $00
-cbmlkeylock ;load
-    .byte $00
-cbmskeylock ;save
-    .byte $00
-cbmxkeylock ;cut
-    .byte $00
-cbmckeylock ;copy
-    .byte $00
-cbmvkeylock ;paste
-    .byte $00
-cbmcommakeylock ;slide left
-    .byte $00
-cbmperiodkeylock ;slide right
-    .byte $00
-cbmcolonkeylock ;slide down
-    .byte $00
-cbmapekeylock ;slide up
-    .byte $00
-keytimer
-    .repeat 3, keytimermax
-    
-filename
-    .repeat 22, $00
-filenamelen
-    .byte $00
-
-notstudio64str
-    .screen "error: not a sprite studio 64 file      "
-nodevstr
-    .screen "error: device not present               "
-invalidstr
-    .screen "error: maybe invalid file               "
-cantwritestr
-    .screen "error: error while writing to file      "
-emptystr
-    .screen "                                        "
-errormsglen
-    .byte *-emptystr
-getfilestr
-    .screen "filename: "
-getfilestrlen
-    .byte *-getfilestr
-    
-spritestr
-    .screen "sprite color "
-spritestrlen
-    .byte *-spritestr
-multi0str
-    .screen "multi-0 color"
-multi0strlen
-    .byte *-multi0str
-multi1str
-    .screen "multi-1 color"
-multi1strlen
-    .byte *-multi1str
-bkgndstr
-    .screen "bkgnd color  "
-bkgndstrlen
-    .byte *-bkgndstr
-modestr
-    .screen "multicolor: "
-modestrlen
-    .byte *-modestr
-gridstr
-    .screen "grid:       "
-gridstrlen
-    .byte *-gridstr
-addrstr
-    .screen "address:"
-addrstrlen
-    .byte *-addrstr
-coordstr
-    .screen "x:   y:"
-coordstrlen
-    .byte *-coordstr
-animationstr
-    .screen "animation:"
-animationstrlen
-    .byte *-animationstr
-overlaystr
-    .screen "overlay:"
-overlaystrlen
-    .byte *-overlaystr
-lockstr
-    .screen "addr lock:"
-lockstrlen
-    .byte *-lockstr
-    
-prgnamestr
-    .screen "sprite studio 64"
-prgnamestrlen
-    .byte *-prgnamestr
-versionstr
-    .screen "ver. 0.9 (beta2)"
-versionstrlen
-    .byte *-versionstr
-copyleftstr
-    .screen "(c) 2022 by tobiasz stamborski"
-copyleftstrlen
-    .byte *-copyleftstr
-advocacystr
-    .screen "pocket knife among sprite editors!"
-advocacystrlen
-    .byte *-advocacystr
-splashinfostr
-    .screen "hit space to continue"
-splashinfostrlen
-    .byte *-splashinfostr
-
-;------------------------------------------------
-;------------------------------------------------
-;dodatkowe miejsce na kod dodatkowych
-;funkcji programu
-
-handlecbmcolonkeydown
-    lda cbmcolonkeylock
-    ora #$01
-    sta cbmcolonkeylock
-    rts
-handlecbmcolonkeyup ;slide down
-.block
-    lda cbmcolonkeylock
-    and #$01
-    bne *+3
-    rts
-    
-    lda spriteaddr
-    sta scraddr
-    lda spriteaddr+1
-    sta scraddr+1
-    lda #<clipboard
-    sta coladdr
-    lda #>clipboard
-    sta coladdr+1
-    
-    ldx #0
-    lda coladdr
-    clc
-    adc #3
-    sta coladdr
-loop1major
-    ldy #0
-loop1minor
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    cpy #3
-    bne loop1minor
-    
-    lda scraddr
-    clc
-    adc #3
-    sta scraddr
-    lda coladdr
-    clc
-    adc #3
-    sta coladdr
-    inx
-    cpx #20
-    bne loop1major
-    
-    lda #<clipboard
-    sta coladdr
-    lda #>clipboard
-    sta coladdr+1
-    ldy #0
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    lda (scraddr),y
-    sta (coladdr),y
-    
-    ldy #0
-loop2
-    lda clipboard,y
-    sta (spriteaddr),y
-    iny
-    cpy #63
-    bne loop2
-    
-    jsr drawcanvas
-    
-    lda cbmcolonkeylock
-    and #$fe
-    sta cbmcolonkeylock
-    rts
-.bend
-    
-handlecbmapekeydown
-    lda cbmapekeylock
-    ora #$01
-    sta cbmapekeylock
-    rts
-handlecbmapekeyup ;slideup
-.block
-    lda cbmapekeylock
-    and #$01
-    bne *+3
-    rts
-    
-    lda spriteaddr
-    sta scraddr
-    lda spriteaddr+1
-    sta scraddr+1
-    lda #<clipboard
-    sta coladdr
-    lda #>clipboard
-    sta coladdr+1
-    
-    lda coladdr
-    clc
-    adc #60
-    sta coladdr
-    ldy #0
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    lda (scraddr),y
-    sta (coladdr),y
-    
-    lda #<clipboard
-    sta coladdr
-    lda #>clipboard
-    sta coladdr+1
-    ldx #0
-    lda scraddr
-    clc
-    adc #3
-    sta scraddr
-loop1major
-    ldy #0
-loop1minor
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    cpy #3
-    bne loop1minor
-    
-    lda scraddr
-    clc
-    adc #3
-    sta scraddr
-    lda coladdr
-    clc
-    adc #3
-    sta coladdr
-    inx
-    cpx #20
-    bne loop1major
-    
-    ldy #0
-loop2
-    lda clipboard,y
-    sta (spriteaddr),y
-    iny
-    cpy #63
-    bne loop2
-    
-    jsr drawcanvas
-    
-    lda cbmapekeylock
-    and #$fe
-    sta cbmapekeylock
-    rts
-.bend
-
-slideleft
-.block
-    lda spriteaddr
-    sta scraddr
-    lda spriteaddr+1
-    sta scraddr+1
-    
-    ldx #0
-loop
-    lda #0
-    sta tmpbyte
-    sta tmpbyte+1
-    sta tmpbyte+2
-    ldy #0
-    lda (scraddr),y
-    clc
-    asl
-    sta (scraddr),y
-    bcc *+7
-    lda #1
-    sta tmpbyte
-    iny
-    lda (scraddr),y
-    clc
-    asl
-    sta (scraddr),y
-    bcc *+7
-    lda #1
-    sta tmpbyte+1
-    iny
-    lda (scraddr),y
-    clc
-    asl
-    sta (scraddr),y
-    bcc *+7
-    lda #1
-    sta tmpbyte+2
-    
-    ;y=2
-    lda (scraddr),y
-    ora tmpbyte
-    sta (scraddr),y
-    dey
-    lda (scraddr),y
-    ora tmpbyte+2
-    sta (scraddr),y
-    dey
-    lda (scraddr),y
-    ora tmpbyte+1
-    sta (scraddr),y
-    
-    clc
-    lda scraddr
-    adc #3
-    sta scraddr
-    inx
-    cpx #21
-    bne loop
-    
-    rts
-.bend
-
-slideright
-.block
-    lda spriteaddr
-    sta scraddr
-    lda spriteaddr+1
-    sta scraddr+1
-    
-    ldx #0
-loop
-    lda #0
-    sta tmpbyte
-    sta tmpbyte+1
-    sta tmpbyte+2
-    ldy #0
-    lda (scraddr),y
-    clc
-    lsr
-    sta (scraddr),y
-    bcc *+7
-    lda #128
-    sta tmpbyte
-    iny
-    lda (scraddr),y
-    clc
-    lsr
-    sta (scraddr),y
-    bcc *+7
-    lda #128
-    sta tmpbyte+1
-    iny
-    lda (scraddr),y
-    clc
-    lsr
-    sta (scraddr),y
-    bcc *+7
-    lda #128
-    sta tmpbyte+2
-    
-    ;y=2
-    lda (scraddr),y
-    ora tmpbyte+1
-    sta (scraddr),y
-    dey
-    lda (scraddr),y
-    ora tmpbyte
-    sta (scraddr),y
-    dey
-    lda (scraddr),y
-    ora tmpbyte+2
-    sta (scraddr),y
-    
-    clc
-    lda scraddr
-    adc #3
-    sta scraddr
-    inx
-    cpx #21
-    bne loop
-    
-    rts
-.bend
-    
-handlecbmcommakeydown
-    lda cbmcommakeylock
-    ora #$01
-    sta cbmcommakeylock
-    rts
-handlecbmcommakeyup ;slideup
-.block
-    lda cbmcommakeylock
-    and #$01
-    bne *+3
-    rts
-    
-    jsr slideleft
-    lda multimode
-    beq *+5
-    jsr slideleft
-    
-    jsr drawcanvas
-    
-    lda cbmcommakeylock
-    and #$fe
-    sta cbmcommakeylock
-    rts
-.bend
-
-handlecbmperiodkeydown
-    lda cbmperiodkeylock
-    ora #$01
-    sta cbmperiodkeylock
-    rts
-handlecbmperiodkeyup ;slideup
-.block
-    lda cbmperiodkeylock
-    and #$01
-    bne *+3
-    rts
-    
-    jsr slideright
-    lda multimode
-    beq *+5
-    jsr slideright
-    
-    jsr drawcanvas
-    
-    lda cbmperiodkeylock
-    and #$fe
-    sta cbmperiodkeylock
-    rts
-.bend
-
-;------------------------------------------------
-;------------------------------------------------
-;$3000 - $4000
-;IS SPRITE BANK
-
-    *=$3000
-    .offs $3000-*
-    
-    .binary "default-spritebank.raw"
     

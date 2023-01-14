@@ -1,5 +1,7 @@
 tmpx -i sprite-studio.s -o studio64.prg
+exomizer sfx basic -o studio64.prg -s "lda $d011 and #$ef sta $d011" -f "lda $d011 ora #$10 sta $d011" -x "inc $d020" studio64.prg
 tmpx -i help.s -o help.prg
+exomizer sfx basic -o help.prg -s "lda $d011 and #$ef sta $d011" -f "lda $d011 ora #$10 sta $d011" -x "inc $d020" help.prg
 tmpx -i examples.s -o examples.prg
 tmpx -i examples2.s -o examples2.prg
 tmpx -i examples3.s -o examples3.prg
