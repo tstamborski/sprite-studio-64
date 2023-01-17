@@ -3162,40 +3162,42 @@ handlecbmdkeyup
     LDX #<filename
     LDY #>filename
     JSR $FFBD      ; set filename "$"
-    LDA #$08
-    STA $BA        ; device #8
-    LDA #$60
-    STA $B9        ; secondary chn
-    JSR $F3D5      ; open for serial bus devices
-    JSR $F219      ; set input device
+    LDA #2
+    LDX $BA
+    LDY #0
+    JSR $FFBA
+    JSR $FFC0      ; open for serial bus devices
+    LDX #2
+    JSR $FFC6      ; set input device
     LDY #$04
 labl1
     inc $d020
-    JSR $EE13      ; input byte on serial bus
+    JSR $FFCF      ; input byte on serial bus
     DEY
     BNE labl1      ; get rid of Y bytes
     LDA $C6        ; key pressed?
     ORA $90        ; or EOF?
     BNE labl2      ; if yes exit
     inc $d020
-    JSR $EE13      ; now get in AX the dimension
+    JSR $FFCF      ; now get in AX the dimension
     TAX            ; of the file
     inc $d020
-    JSR $EE13
+    JSR $FFCF
     JSR $BDCD      ; print number from AX
     lda #" "
     jsr chrout     ;spacja po numerze linii
 labl3
     inc $d020
-    JSR $EE13      ; now the filename
+    JSR $FFCF      ; now the filename
     JSR $E716      ; put a character to screen
     BNE labl3      ; while not 0 encountered
     JSR $AAD7      ; put a CR , end line
     LDY #$02       ; set 2 bytes to skip
     BNE labl1      ; repeat
 labl2
-    JSR $F642      ; close serial bus device
-    JSR $F6F3      ; restore I/O devices to default
+    LDA #2
+    JSR $FFC3      ; close serial bus device
+    JSR $FFCC      ; restore I/O devices to default
     lda #0
     sta $d020
 
@@ -3853,7 +3855,7 @@ savefile
     ldy #0
     jsr setnam
     lda #15
-    ldx #8
+    ldx $ba
     ldy #15
     jsr setlfs
     jsr open
@@ -3863,7 +3865,7 @@ savefile
     ldy #>filename
     jsr setnam
     lda #2
-    ldx #8
+    ldx $ba
     ldy #2
     jsr setlfs
     clc
@@ -3929,7 +3931,7 @@ loadfile
     ldy #0
     jsr setnam
     lda #15
-    ldx #8
+    ldx $ba
     ldy #15
     jsr setlfs
     jsr open
@@ -3939,7 +3941,7 @@ loadfile
     ldy #>filename
     jsr setnam
     lda #2
-    ldx #8
+    ldx $ba
     ldy #2
     jsr setlfs
     clc
