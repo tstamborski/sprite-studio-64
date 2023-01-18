@@ -10,8 +10,9 @@ Sprite Studio 64 is native sprite editor for Commodore 64 computer.
 It is made with simplicity and minimalism.
 Sprite Studio 64 can edit simultaneously 64 sprites - only 64 but it has also some tools for animating them and sprite overlay.
 It can save your work on diskette in PRG file - this files can be loaded by basic LOAD command or be embedded in assembly source code.
-## Disclaimer
-Music used in this program is not mine - it was taken from https://www.hvsc.c64.org/ and its author is Raik Picheta.
+## Disclaimer / Additional credits
+Music used in this program is not mine - it was taken from https://www.hvsc.c64.org/ and its author is **Raik Picheta (Eco)**.
+Thanks to scener **Soci** for patch fixing program to doesn't use fixed 8 device number in loading/saving routines.
 ## Short instruction / Keyboard shortcuts
 *IF YOU ARE USING EMULATOR THERE IS BETTER TO USE POSITIONAL THEN SYMBOLIC KEYBOARD.*
 ### DRAWING
@@ -50,7 +51,6 @@ Music used in this program is not mine - it was taken from https://www.hvsc.c64.
 ### MISC
 * **[CBM+Q]** - exit from program and return to BASIC
 * **[G]** - switch on/off the grid mode
-* **[E]** - switch different (brown or default black) color of overall screen background
 ## Building from source instructions
 For building from source, you can use shipped make.bat batch file, but you will need following tools somewhere in PATH environment variable:
 * **TMPx** assembler.

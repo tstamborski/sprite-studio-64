@@ -214,8 +214,6 @@ multimode
     .byte $01
 gridmode
     .byte $00
-lightmode
-    .byte $00
     
 animationmode
     .byte $01
@@ -277,8 +275,6 @@ gkeylock
 fkeylock ;flip horizontal
     .byte $00
 shiftfkeylock ;flip vertical
-    .byte $00
-ekeylock ;"light" mode
     .byte $00
 pluskeylock
     .byte $00
@@ -389,7 +385,7 @@ prgnamestr
 prgnamestrlen
     .byte *-prgnamestr
 versionstr
-    .screen "ver. 1.0"
+    .screen "ver. 1.1"
 versionstrlen
     .byte *-versionstr
 copyleftstr
@@ -917,6 +913,56 @@ loop2
 
 ;------------------------------------------------
 
+drawpreviewbg
+.block
+    ldx #0
+line0
+    lda #75
+    sta $400+520+29,x
+    lda bkgndcol
+    sta $d800+520+29,x
+    inx
+    cpx #6
+    bne line0
+    
+    ldx #0
+    lda #<($400+560+29)
+    sta scraddr
+    lda #>($400+560+29)
+    sta scraddr+1
+    lda #<($d800+560+29)
+    sta coladdr
+    lda #>($d800+560+29)
+    sta coladdr+1
+majorloop
+    ldy #0
+minorloop
+    lda #69
+    sta (scraddr),y
+    lda bkgndcol
+    sta (coladdr),y
+    iny
+    cpy #6
+    bne minorloop
+    lda scraddr
+    clc
+    adc #40
+    sta scraddr
+    bcc *+4
+    inc scraddr+1
+    lda coladdr
+    clc
+    adc #40
+    sta coladdr
+    bcc *+4
+    inc coladdr+1
+    inx
+    cpx #5
+    bne majorloop
+    
+    rts
+.bend
+
 setuppreview
 .block
     lda addrlock
@@ -953,7 +999,7 @@ setuppreview
     sta $d002
     sta $d004
     sta $d006
-    lda #155
+    lda #160
     sta $d001
     sta $d003
     sta $d005
@@ -1282,6 +1328,7 @@ setupall
     jsr drawcanvas
     
     jsr drawprevopts
+    jsr drawpreviewbg
     jsr setuppreview
     
     rts
@@ -2134,13 +2181,6 @@ nomodifiers
     jmp *+6
     jsr handleakeyup
     
-    lda $dc01
-    and #%01000000
-    bne *+8
-    jsr handleekeydown
-    jmp *+6
-    jsr handleekeyup
-    
     lda #%11111110 ;0
     sta $dc00
     
@@ -2841,37 +2881,6 @@ correct
     sta curcol
 fend
     jsr drawcolorchoose
-    rts
-.bend
-
-;------------------------------------------------
-
-handleekeydown
-    lda ekeylock
-    ora #$01
-    sta ekeylock
-    rts
-handleekeyup
-.block
-    lda ekeylock
-    and #$01
-    bne *+3
-    rts
-    
-    lda lightmode
-    eor #$01
-    sta lightmode
-    cmp #0
-    bne *+10
-    lda #0
-    sta $d021
-    jmp *+8
-    lda #9
-    sta $d021
-    
-    lda ekeylock
-    and #$fe
-    sta ekeylock
     rts
 .bend
 
