@@ -12,6 +12,7 @@ Sprite Studio 64 can edit simultaneously 64 sprites - only 64 but it has also so
 It can save your work on diskette in PRG file - this files can be loaded by basic LOAD command or be embedded in assembly source code.
 ## Disclaimer / Additional credits
 Music used in this program is not mine - it was taken from https://www.hvsc.c64.org/ and its author is **Raik Picheta (Eco)**.
+
 Thanks to scener **Soci** for patch fixing program to doesn't use fixed 8 device number in loading/saving routines.
 ## Short instruction / Keyboard shortcuts
 *IF YOU ARE USING EMULATOR THERE IS BETTER TO USE POSITIONAL THEN SYMBOLIC KEYBOARD.*
