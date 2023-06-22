@@ -1,5 +1,5 @@
 # Sprite Studio 64
-Native sprite editor for Commodore 64.
+Native sprite editor for Commodore 64. Pocket knife among sprite editors!
 ## Screenshots
 ![Screenshot 1](screenshot-0.jpg)
 ![Screenshot 2](screenshot-1.jpg)
