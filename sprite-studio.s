@@ -7,6 +7,9 @@ coladdr = $0004 ;pamieci kolorow i ekranowej
                 
 previewaddr = $0006 ;wyłącznie na użytek
                     ;funkcji setuppreview
+
+queuebegin = $0008 ;wskazniki na aktualny poczatek
+queueend = $000a ;i koniec kolejki
                 
 spriteaddr = $00fb ;adres obecnego sprite'u
 
@@ -247,6 +250,9 @@ bkgndcol
 curcol ;spojrz stale na poczatku
     .byte $02
 
+basecol ;dla funkcji floodfillmulti
+    .byte $00
+
 spriteindex
     .byte $00
 spritebyte
@@ -385,11 +391,11 @@ prgnamestr
 prgnamestrlen
     .byte *-prgnamestr
 versionstr
-    .screen "ver. 1.1"
+    .screen "ver. 1.2"
 versionstrlen
     .byte *-versionstr
 copyleftstr
-    .screen "(c) 2023 by tobiasz stamborski"
+    .screen "(c) 2024 by tobiasz stamborski"
 copyleftstrlen
     .byte *-copyleftstr
 musicstr
@@ -407,418 +413,14 @@ splashinfostrlen
 
 ;------------------------------------------------
 ;------------------------------------------------
-;dodatkowe miejsce na kod dodatkowych
-;funkcji programu
+;1 kB pamieci zarezerwowany na kolejke
+;dla algorytmu floodfill.
 
-handlecbmcolonkeydown
-    lda cbmcolonkeylock
-    ora #$01
-    sta cbmcolonkeylock
-    rts
-handlecbmcolonkeyup ;slide down
-.block
-    lda cbmcolonkeylock
-    and #$01
-    bne *+3
-    rts
-    
-    lda spriteaddr
-    sta scraddr
-    lda spriteaddr+1
-    sta scraddr+1
-    lda #<clipboard
-    sta coladdr
-    lda #>clipboard
-    sta coladdr+1
-    
-    ldx #0
-    lda coladdr
-    clc
-    adc #3
-    sta coladdr
-loop1major
-    ldy #0
-loop1minor
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    cpy #3
-    bne loop1minor
-    
-    lda scraddr
-    clc
-    adc #3
-    sta scraddr
-    lda coladdr
-    clc
-    adc #3
-    sta coladdr
-    inx
-    cpx #20
-    bne loop1major
-    
-    lda #<clipboard
-    sta coladdr
-    lda #>clipboard
-    sta coladdr+1
-    ldy #0
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    lda (scraddr),y
-    sta (coladdr),y
-    
-    ldy #0
-loop2
-    lda clipboard,y
-    sta (spriteaddr),y
-    iny
-    cpy #63
-    bne loop2
-    
-    jsr drawcanvas
-    
-    lda cbmcolonkeylock
-    and #$fe
-    sta cbmcolonkeylock
-    rts
-.bend
-    
-handlecbmapekeydown
-    lda cbmapekeylock
-    ora #$01
-    sta cbmapekeylock
-    rts
-handlecbmapekeyup ;slideup
-.block
-    lda cbmapekeylock
-    and #$01
-    bne *+3
-    rts
-    
-    lda spriteaddr
-    sta scraddr
-    lda spriteaddr+1
-    sta scraddr+1
-    lda #<clipboard
-    sta coladdr
-    lda #>clipboard
-    sta coladdr+1
-    
-    lda coladdr
-    clc
-    adc #60
-    sta coladdr
-    ldy #0
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    lda (scraddr),y
-    sta (coladdr),y
-    
-    lda #<clipboard
-    sta coladdr
-    lda #>clipboard
-    sta coladdr+1
-    ldx #0
-    lda scraddr
-    clc
-    adc #3
-    sta scraddr
-loop1major
-    ldy #0
-loop1minor
-    lda (scraddr),y
-    sta (coladdr),y
-    iny
-    cpy #3
-    bne loop1minor
-    
-    lda scraddr
-    clc
-    adc #3
-    sta scraddr
-    lda coladdr
-    clc
-    adc #3
-    sta coladdr
-    inx
-    cpx #20
-    bne loop1major
-    
-    ldy #0
-loop2
-    lda clipboard,y
-    sta (spriteaddr),y
-    iny
-    cpy #63
-    bne loop2
-    
-    jsr drawcanvas
-    
-    lda cbmapekeylock
-    and #$fe
-    sta cbmapekeylock
-    rts
-.bend
+    *=$2c00
+    .offs $2c00-*
 
-slideleft
-.block
-    lda spriteaddr
-    sta scraddr
-    lda spriteaddr+1
-    sta scraddr+1
-    
-    ldx #0
-loop
-    lda #0
-    sta tmpbyte
-    sta tmpbyte+1
-    sta tmpbyte+2
-    ldy #0
-    lda (scraddr),y
-    clc
-    asl
-    sta (scraddr),y
-    bcc *+7
-    lda #1
-    sta tmpbyte
-    iny
-    lda (scraddr),y
-    clc
-    asl
-    sta (scraddr),y
-    bcc *+7
-    lda #1
-    sta tmpbyte+1
-    iny
-    lda (scraddr),y
-    clc
-    asl
-    sta (scraddr),y
-    bcc *+7
-    lda #1
-    sta tmpbyte+2
-    
-    ;y=2
-    lda (scraddr),y
-    ora tmpbyte
-    sta (scraddr),y
-    dey
-    lda (scraddr),y
-    ora tmpbyte+2
-    sta (scraddr),y
-    dey
-    lda (scraddr),y
-    ora tmpbyte+1
-    sta (scraddr),y
-    
-    clc
-    lda scraddr
-    adc #3
-    sta scraddr
-    inx
-    cpx #21
-    bne loop
-    
-    rts
-.bend
-
-slideright
-.block
-    lda spriteaddr
-    sta scraddr
-    lda spriteaddr+1
-    sta scraddr+1
-    
-    ldx #0
-loop
-    lda #0
-    sta tmpbyte
-    sta tmpbyte+1
-    sta tmpbyte+2
-    ldy #0
-    lda (scraddr),y
-    clc
-    lsr
-    sta (scraddr),y
-    bcc *+7
-    lda #128
-    sta tmpbyte
-    iny
-    lda (scraddr),y
-    clc
-    lsr
-    sta (scraddr),y
-    bcc *+7
-    lda #128
-    sta tmpbyte+1
-    iny
-    lda (scraddr),y
-    clc
-    lsr
-    sta (scraddr),y
-    bcc *+7
-    lda #128
-    sta tmpbyte+2
-    
-    ;y=2
-    lda (scraddr),y
-    ora tmpbyte+1
-    sta (scraddr),y
-    dey
-    lda (scraddr),y
-    ora tmpbyte
-    sta (scraddr),y
-    dey
-    lda (scraddr),y
-    ora tmpbyte+2
-    sta (scraddr),y
-    
-    clc
-    lda scraddr
-    adc #3
-    sta scraddr
-    inx
-    cpx #21
-    bne loop
-    
-    rts
-.bend
-    
-handlecbmcommakeydown
-    lda cbmcommakeylock
-    ora #$01
-    sta cbmcommakeylock
-    rts
-handlecbmcommakeyup ;slideup
-.block
-    lda cbmcommakeylock
-    and #$01
-    bne *+3
-    rts
-    
-    jsr slideleft
-    lda multimode
-    beq *+5
-    jsr slideleft
-    
-    jsr drawcanvas
-    
-    lda cbmcommakeylock
-    and #$fe
-    sta cbmcommakeylock
-    rts
-.bend
-
-handlecbmperiodkeydown
-    lda cbmperiodkeylock
-    ora #$01
-    sta cbmperiodkeylock
-    rts
-handlecbmperiodkeyup ;slideup
-.block
-    lda cbmperiodkeylock
-    and #$01
-    bne *+3
-    rts
-    
-    jsr slideright
-    lda multimode
-    beq *+5
-    jsr slideright
-    
-    jsr drawcanvas
-    
-    lda cbmperiodkeylock
-    and #$fe
-    sta cbmperiodkeylock
-    rts
-.bend
-
-disablepreview
-    lda #$80
-    sta $d015
-    rts
-    
-setupmusic
-    sei
-    lda #$00
-    jsr music
-    cli
-    rts
-    
-setupirqstd
-    sei
-    
-    lda #%01111111
-    sta $dc0d
-    sta $dd0d
-    
-    and $d011
-    sta $d011
-    
-    lda $dc0d
-    lda $dd0d
-    
-    lda #210
-    sta $D012
-
-    lda #<irqstd
-    sta $0314
-    lda #>irqstd
-    sta $0315
-
-    lda #%00000001
-    sta $D01A
-    
-    cli
-    rts
-    
-setupirqkblisten
-    sei
-    
-    lda #%01111111
-    sta $dc0d
-    sta $dd0d
-    
-    and $d011
-    sta $d011
-    
-    lda $dc0d
-    lda $dd0d
-    
-    lda #210
-    sta $D012
-
-    lda #<irqkblisten
-    sta $0314
-    lda #>irqkblisten
-    sta $0315
-
-    lda #%00000001
-    sta $D01A
-    
-    cli
-    rts
-    
-irqstd
-    jsr music+3
-
-    asl $d019
-    jmp $ea81
-    
-irqkblisten
-    jsr music+3
-
-    asl $d019
-    jmp $ea31
+queuearea
+    .repeat 1024, $00
 
 ;------------------------------------------------
 ;------------------------------------------------
@@ -2307,9 +1909,14 @@ cbmpressed
     sta $dc00
 
     lda $dc01
+    and #%00010000
+    bne *+5
+    jsr handlecbmspacekey
+
+    lda $dc01
     and #%01000000
     bne *+5
-    jsr reset ;CBM+Q
+    jmp reset ;CBM+Q
     
     lda #%11011111 ;5
     sta $dc00
@@ -2475,10 +2082,12 @@ handledelkey
     
     lda multimode
     cmp #0
-    bne *+8
-    jsr spacekeysingle
-    jmp *+6
-    jsr spacekeymulti
+    bne *+11
+    jsr putcolorsingle
+    jsr drawcanvassingle
+    jmp *+9
+    jsr putcolormulti
+    jsr drawcanvasmulti
     
     pla
     sta curcol
@@ -2490,13 +2099,31 @@ handlespacekey
     
     lda multimode
     cmp #0
-    bne *+6
-    jsr spacekeysingle
+    bne *+9
+    jsr putcolorsingle
+    jsr drawcanvassingle
     rts
-    jsr spacekeymulti
+    jsr putcolormulti
+    jsr drawcanvasmulti
     rts
 
-spacekeymulti
+handlecbmspacekey
+.block
+    #handlekeytimer functiontimer
+
+    lda multimode
+    cmp #0
+    bne *+8
+    jsr floodfillsingle
+    jmp *+6
+    jsr floodfillmulti
+
+    jsr drawcanvas
+    jsr setupcursor
+    rts
+.bend
+
+putcolormulti
 .block
     lda #0
     ldx cursory
@@ -2569,12 +2196,81 @@ loopend4
     ldy spriteindex
     sta (spriteaddr),y
     
-    jsr drawcanvasmulti
-    
     rts
 .bend
 
-spacekeysingle
+getcolormulti
+.block
+    lda #0
+    ldx cursory
+    cpx #0
+    beq loopend1
+    clc
+loop1
+    adc #3
+    dex
+    bne loop1
+loopend1
+    sta spriteindex
+
+    lda cursorx
+    ldx #0
+    sec
+loop2
+    inx
+    sbc #4
+    bcs loop2
+    dex
+
+    ;4 - reszta z dzielenia
+    ;do przesuniecia bitowego nizej
+    eor #$ff
+    and #$03
+    sta bitcounter
+
+    ;suma ze wspolrzednych x i y
+    lda spriteindex
+    stx spriteindex
+    clc
+    adc spriteindex
+    tay
+    sty spriteindex
+
+    ;pobrac wlasciwy bajt ze sprite'a
+    lda (spriteaddr),y
+    sta spritebyte
+
+    ;przesuniecie bitowe
+    lda #$03
+    ldx bitcounter
+    cpx #0
+    beq loopend3
+loop3
+    asl
+    asl
+    dex
+    bne loop3
+loopend3
+    sta bitmask
+
+    lda spritebyte
+    and bitmask
+    ldx bitcounter
+    cpx #0
+    beq loopend4
+loop4
+    lsr
+    lsr
+    dex
+    bne loop4
+loopend4
+    ;akumulator powinien zawierac kolor
+    ;pojedynczego piksela (spriteon,multi0on etc.)
+
+    rts
+.bend
+
+putcolorsingle
 .block
     lda #0
     ldx cursory
@@ -2648,8 +2344,71 @@ loopend4
     ldy spriteindex
     sta (spriteaddr),y
     
-    jsr drawcanvassingle
-    
+    rts
+.bend
+
+getcolorsingle
+.block
+    lda #0
+    ldx cursory
+    cpx #0
+    beq loopend1
+    clc
+loop1
+    adc #3
+    dex
+    bne loop1
+loopend1
+    sta spriteindex
+
+    lda cursorx
+    ldx #0
+    sec
+loop2
+    inx
+    sbc #8
+    bcs loop2
+    dex
+
+    ;8 - reszta z dzielenia
+    ;do przesuniecia bitowego nizej
+    eor #$ff
+    and #$07
+    sta bitcounter
+
+    ;suma ze wspolrzednych x i y
+    lda spriteindex
+    stx spriteindex
+    clc
+    adc spriteindex
+    tay
+    sty spriteindex
+
+    ;pobrac wlasciwy bajt ze sprite'a
+    lda (spriteaddr),y
+    sta spritebyte
+
+    ;przesuniecie bitowe
+    lda #$01
+    ldx bitcounter
+    cpx #0
+    beq loopend3
+loop3
+    asl
+    dex
+    bne loop3
+loopend3
+    sta bitmask
+
+    ;piksel zapalony albo nie
+    lda spritebyte
+    and bitmask
+    cmp #0
+    beq *+4
+    lda #$02
+    ;w akumulatorze powinno byc 0 (bkgndon) albo
+    ;2 (spriteon) w zaleznosci od koloru
+
     rts
 .bend
 
@@ -4143,3 +3902,614 @@ initcharset
 
     rts
     
+;------------------------------------------------
+
+handlecbmcolonkeydown
+    lda cbmcolonkeylock
+    ora #$01
+    sta cbmcolonkeylock
+    rts
+handlecbmcolonkeyup ;slide down
+.block
+    lda cbmcolonkeylock
+    and #$01
+    bne *+3
+    rts
+
+    lda spriteaddr
+    sta scraddr
+    lda spriteaddr+1
+    sta scraddr+1
+    lda #<clipboard
+    sta coladdr
+    lda #>clipboard
+    sta coladdr+1
+
+    ldx #0
+    lda coladdr
+    clc
+    adc #3
+    sta coladdr
+loop1major
+    ldy #0
+loop1minor
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    cpy #3
+    bne loop1minor
+
+    lda scraddr
+    clc
+    adc #3
+    sta scraddr
+    lda coladdr
+    clc
+    adc #3
+    sta coladdr
+    inx
+    cpx #20
+    bne loop1major
+
+    lda #<clipboard
+    sta coladdr
+    lda #>clipboard
+    sta coladdr+1
+    ldy #0
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    lda (scraddr),y
+    sta (coladdr),y
+
+    ldy #0
+loop2
+    lda clipboard,y
+    sta (spriteaddr),y
+    iny
+    cpy #63
+    bne loop2
+
+    jsr drawcanvas
+
+    lda cbmcolonkeylock
+    and #$fe
+    sta cbmcolonkeylock
+    rts
+.bend
+
+handlecbmapekeydown
+    lda cbmapekeylock
+    ora #$01
+    sta cbmapekeylock
+    rts
+handlecbmapekeyup ;slideup
+.block
+    lda cbmapekeylock
+    and #$01
+    bne *+3
+    rts
+
+    lda spriteaddr
+    sta scraddr
+    lda spriteaddr+1
+    sta scraddr+1
+    lda #<clipboard
+    sta coladdr
+    lda #>clipboard
+    sta coladdr+1
+
+    lda coladdr
+    clc
+    adc #60
+    sta coladdr
+    ldy #0
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    lda (scraddr),y
+    sta (coladdr),y
+
+    lda #<clipboard
+    sta coladdr
+    lda #>clipboard
+    sta coladdr+1
+    ldx #0
+    lda scraddr
+    clc
+    adc #3
+    sta scraddr
+loop1major
+    ldy #0
+loop1minor
+    lda (scraddr),y
+    sta (coladdr),y
+    iny
+    cpy #3
+    bne loop1minor
+
+    lda scraddr
+    clc
+    adc #3
+    sta scraddr
+    lda coladdr
+    clc
+    adc #3
+    sta coladdr
+    inx
+    cpx #20
+    bne loop1major
+
+    ldy #0
+loop2
+    lda clipboard,y
+    sta (spriteaddr),y
+    iny
+    cpy #63
+    bne loop2
+
+    jsr drawcanvas
+
+    lda cbmapekeylock
+    and #$fe
+    sta cbmapekeylock
+    rts
+.bend
+
+slideleft
+.block
+    lda spriteaddr
+    sta scraddr
+    lda spriteaddr+1
+    sta scraddr+1
+
+    ldx #0
+loop
+    lda #0
+    sta tmpbyte
+    sta tmpbyte+1
+    sta tmpbyte+2
+    ldy #0
+    lda (scraddr),y
+    clc
+    asl
+    sta (scraddr),y
+    bcc *+7
+    lda #1
+    sta tmpbyte
+    iny
+    lda (scraddr),y
+    clc
+    asl
+    sta (scraddr),y
+    bcc *+7
+    lda #1
+    sta tmpbyte+1
+    iny
+    lda (scraddr),y
+    clc
+    asl
+    sta (scraddr),y
+    bcc *+7
+    lda #1
+    sta tmpbyte+2
+
+    ;y=2
+    lda (scraddr),y
+    ora tmpbyte
+    sta (scraddr),y
+    dey
+    lda (scraddr),y
+    ora tmpbyte+2
+    sta (scraddr),y
+    dey
+    lda (scraddr),y
+    ora tmpbyte+1
+    sta (scraddr),y
+
+    clc
+    lda scraddr
+    adc #3
+    sta scraddr
+    inx
+    cpx #21
+    bne loop
+
+    rts
+.bend
+
+slideright
+.block
+    lda spriteaddr
+    sta scraddr
+    lda spriteaddr+1
+    sta scraddr+1
+
+    ldx #0
+loop
+    lda #0
+    sta tmpbyte
+    sta tmpbyte+1
+    sta tmpbyte+2
+    ldy #0
+    lda (scraddr),y
+    clc
+    lsr
+    sta (scraddr),y
+    bcc *+7
+    lda #128
+    sta tmpbyte
+    iny
+    lda (scraddr),y
+    clc
+    lsr
+    sta (scraddr),y
+    bcc *+7
+    lda #128
+    sta tmpbyte+1
+    iny
+    lda (scraddr),y
+    clc
+    lsr
+    sta (scraddr),y
+    bcc *+7
+    lda #128
+    sta tmpbyte+2
+
+    ;y=2
+    lda (scraddr),y
+    ora tmpbyte+1
+    sta (scraddr),y
+    dey
+    lda (scraddr),y
+    ora tmpbyte
+    sta (scraddr),y
+    dey
+    lda (scraddr),y
+    ora tmpbyte+2
+    sta (scraddr),y
+
+    clc
+    lda scraddr
+    adc #3
+    sta scraddr
+    inx
+    cpx #21
+    bne loop
+
+    rts
+.bend
+
+handlecbmcommakeydown
+    lda cbmcommakeylock
+    ora #$01
+    sta cbmcommakeylock
+    rts
+handlecbmcommakeyup
+.block
+    lda cbmcommakeylock
+    and #$01
+    bne *+3
+    rts
+
+    jsr slideleft
+    lda multimode
+    beq *+5
+    jsr slideleft
+
+    jsr drawcanvas
+
+    lda cbmcommakeylock
+    and #$fe
+    sta cbmcommakeylock
+    rts
+.bend
+
+handlecbmperiodkeydown
+    lda cbmperiodkeylock
+    ora #$01
+    sta cbmperiodkeylock
+    rts
+handlecbmperiodkeyup
+.block
+    lda cbmperiodkeylock
+    and #$01
+    bne *+3
+    rts
+
+    jsr slideright
+    lda multimode
+    beq *+5
+    jsr slideright
+
+    jsr drawcanvas
+
+    lda cbmperiodkeylock
+    and #$fe
+    sta cbmperiodkeylock
+    rts
+.bend
+
+;------------------------------------------------
+
+disablepreview
+    lda #$80
+    sta $d015
+    rts
+
+setupmusic
+    sei
+    lda #$00
+    jsr music
+    cli
+    rts
+
+setupirqstd
+    sei
+
+    lda #%01111111
+    sta $dc0d
+    sta $dd0d
+
+    and $d011
+    sta $d011
+
+    lda $dc0d
+    lda $dd0d
+
+    lda #210
+    sta $D012
+
+    lda #<irqstd
+    sta $0314
+    lda #>irqstd
+    sta $0315
+
+    lda #%00000001
+    sta $D01A
+
+    cli
+    rts
+
+setupirqkblisten
+    sei
+
+    lda #%01111111
+    sta $dc0d
+    sta $dd0d
+
+    and $d011
+    sta $d011
+
+    lda $dc0d
+    lda $dd0d
+
+    lda #210
+    sta $D012
+
+    lda #<irqkblisten
+    sta $0314
+    lda #>irqkblisten
+    sta $0315
+
+    lda #%00000001
+    sta $D01A
+
+    cli
+    rts
+
+irqstd
+    jsr music+3
+
+    asl $d019
+    jmp $ea81
+
+irqkblisten
+    jsr music+3
+
+    asl $d019
+    jmp $ea31
+
+;------------------------------------------------
+
+queueinit
+    lda #<queuearea
+    sta queuebegin
+    sta queueend
+    lda #>queuearea
+    sta queuebegin+1
+    sta queueend+1
+    rts
+
+isqueueempty
+    lda queuebegin+1
+    cmp queueend+1
+    beq *+5
+    lda #0
+    rts
+    lda queuebegin
+    cmp queueend
+    beq *+5
+    lda #0
+    rts
+    lda #1
+    rts
+
+queuepush
+;reg x <- wspolrzedna x piksela
+;reg y <- wspolrzedna y piksela
+.block
+    tya
+    pha
+    txa
+
+    ldy #0
+    sta (queueend),y
+    iny
+    pla
+    sta (queueend),y
+
+    clc
+    inc queueend
+    bne *+4
+    inc queueend+1
+    inc queueend
+    bne *+4
+    inc queueend+1
+    lda queueend+1
+    and #$03
+    ora #>queuearea
+    sta queueend+1
+
+    rts
+.bend
+
+queuepull
+;reg x -> wspolrzedna x piksela
+;reg y -> wspolrzedna y piksela
+.block
+    ldy #1
+    lda (queuebegin),y
+    pha
+    dey
+    lda (queuebegin),y
+    pha
+
+    clc
+    inc queuebegin
+    bne *+4
+    inc queuebegin+1
+    inc queuebegin
+    bne *+4
+    inc queuebegin+1
+    lda queuebegin+1
+    and #$03
+    ora #>queuearea
+    sta queuebegin+1
+
+    pla
+    tax
+    pla
+    tay
+    rts
+.bend
+
+floodfillsingle
+.block
+    jsr queueinit
+    ldx cursorx
+    ldy cursory
+    jsr queuepush
+
+loop
+    jsr isqueueempty
+    bne loopend
+
+    jsr queuepull
+    stx cursorx
+    sty cursory
+    jsr getcolorsingle
+    cmp curcol
+    beq loop
+
+    inc $d020
+    jsr putcolorsingle
+
+    ldx cursorx
+    ldy cursory
+    iny
+    cpy #21
+    beq *+5
+    jsr queuepush
+    ldx cursorx
+    ldy cursory
+    dey
+    cpy #$ff
+    beq *+5
+    jsr queuepush
+    ldx cursorx
+    ldy cursory
+    inx
+    cpx #24
+    beq *+5
+    jsr queuepush
+    ldx cursorx
+    ldy cursory
+    dex
+    cpx #$ff
+    beq *+5
+    jsr queuepush
+
+    jmp loop
+loopend
+
+    lda #0
+    sta $d020
+    rts
+.bend
+
+floodfillmulti
+.block
+    jsr getcolormulti
+    cmp curcol
+    bne *+3
+    rts
+    sta basecol
+
+    jsr queueinit
+    ldx cursorx
+    ldy cursory
+    jsr queuepush
+
+loop
+    jsr isqueueempty
+    bne loopend
+
+    jsr queuepull
+    stx cursorx
+    sty cursory
+    jsr getcolormulti
+    cmp basecol
+    bne loop
+
+    inc $d020
+    jsr putcolormulti
+
+    ldx cursorx
+    ldy cursory
+    iny
+    cpy #21
+    beq *+5
+    jsr queuepush
+    ldx cursorx
+    ldy cursory
+    dey
+    cpy #$ff
+    beq *+5
+    jsr queuepush
+    ldx cursorx
+    ldy cursory
+    inx
+    cpx #12
+    beq *+5
+    jsr queuepush
+    ldx cursorx
+    ldy cursory
+    dex
+    cpx #$ff
+    beq *+5
+    jsr queuepush
+
+    jmp loop
+loopend
+
+    lda #0
+    sta $d020
+    rts
+.bend
