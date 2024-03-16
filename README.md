@@ -2,10 +2,10 @@
 Native sprite editor for Commodore 64. Pocket knife among sprite editors.
 
 ## Screenshots
-![Screenshot 1](screenshot-0.jpg)
-![Screenshot 2](screenshot-1.jpg)
-![Screenshot 3](screenshot-2.jpg)
-![Screenshot 4](screenshot-3.jpg)
+![Screenshot 1](screenshot0.png)
+![Screenshot 2](screenshot1.png)
+![Screenshot 3](screenshot2.png)
+![Screenshot 4](screenshot3.png)
 
 ## Overview
 Sprite Studio 64 is a native sprite editor for Commodore 64 computer.
@@ -23,7 +23,7 @@ Thanks to scener **Soci** for a patch fixing program to doesn't use fixed 8 devi
 *IF YOU ARE USING EMULATOR THERE IS BETTER TO USE POSITIONAL THEN SYMBOLIC KEYBOARD.*
 ### DRAWING
 * **[joystick directions]** or **[CRSR]** - move the drawing cursor around
-* **[joystick fire]** or **[space]** - put choosen color in place of cursor
+* **[joystick fire]** or **[Space]** - put choosen color in place of cursor
 * **[del]** - erase / put background color in place of cursor
 ### CHANGING COLORS
 * **[F1]** or **[Shift+F1]** - change sprite color
@@ -35,6 +35,7 @@ Thanks to scener **Soci** for a patch fixing program to doesn't use fixed 8 devi
 * **[3]** - choose multi color 2 for drawing
 * **[4]** - choose background color for drawing
 ### ADVANCED EDITING
+* **[CBM+Space]** - make floodfill aka paint bucket from MS Paint
 * **[M]** - switch on/off multicolor mode
 * **[CBM+X]** - "cut" current sprite
 * **[CBM+C]** - "copy" current sprite
