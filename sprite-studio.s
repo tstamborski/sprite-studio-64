@@ -87,7 +87,7 @@ loop
 .endm
 
 ;obsluguje spowalniacze przyciskow
-keytimermax = $80
+keytimermax = $88
 spacetimer = 0
 updowntimer = 1
 leftrighttimer = 2
@@ -1686,17 +1686,13 @@ nomodifiers
     
     lda $dc01
     and #%00001000
-    bne *+8
+    bne *+5
     jsr handleminuskeydown
-    jmp *+6
-    jsr handleminuskeyup
     
     lda $dc01
     and #%00000001
-    bne *+8
+    bne *+5
     jsr handlepluskeydown
-    jmp *+6
-    jsr handlepluskeyup
     
     lda $dc01
     and #%00000100
@@ -1923,31 +1919,23 @@ cbmpressed
     
     lda $dc01
     and #%10000000
-    bne *+8
+    bne *+5
     jsr handlecbmcommakeydown
-    jmp *+6
-    jsr handlecbmcommakeyup
     
     lda $dc01
     and #%00010000
-    bne *+8
+    bne *+5
     jsr handlecbmperiodkeydown
-    jmp *+6
-    jsr handlecbmperiodkeyup
     
     lda $dc01
     and #%00100000
-    bne *+8
+    bne *+5
     jsr handlecbmcolonkeydown
-    jmp *+6
-    jsr handlecbmcolonkeyup
     
     lda $dc01
     and #%01000000
-    bne *+8
+    bne *+5
     jsr handlecbmapekeydown
-    jmp *+6
-    jsr handlecbmapekeyup
     
     lda $dc01
     and #%00000100
@@ -2646,16 +2634,8 @@ fend
 ;------------------------------------------------
 
 handlepluskeydown
-    lda pluskeylock
-    ora #$01
-    sta pluskeylock
-    rts
-handlepluskeyup
 .block
-    lda pluskeylock
-    and #$01
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     lda spriteaddr
     clc
@@ -2696,16 +2676,8 @@ funcend
 .bend
 
 handleminuskeydown
-    lda minuskeylock
-    ora #$01
-    sta minuskeylock
-    rts
-handleminuskeyup
 .block
-    lda minuskeylock
-    and #$01
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
     
     lda spriteaddr
     sec
@@ -3904,17 +3876,9 @@ initcharset
     
 ;------------------------------------------------
 
-handlecbmcolonkeydown
-    lda cbmcolonkeylock
-    ora #$01
-    sta cbmcolonkeylock
-    rts
-handlecbmcolonkeyup ;slide down
+handlecbmcolonkeydown ;slide down
 .block
-    lda cbmcolonkeylock
-    and #$01
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
 
     lda spriteaddr
     sta scraddr
@@ -3981,17 +3945,9 @@ loop2
     rts
 .bend
 
-handlecbmapekeydown
-    lda cbmapekeylock
-    ora #$01
-    sta cbmapekeylock
-    rts
-handlecbmapekeyup ;slideup
+handlecbmapekeydown ;slideup
 .block
-    lda cbmapekeylock
-    and #$01
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
 
     lda spriteaddr
     sta scraddr
@@ -4187,16 +4143,8 @@ loop
 .bend
 
 handlecbmcommakeydown
-    lda cbmcommakeylock
-    ora #$01
-    sta cbmcommakeylock
-    rts
-handlecbmcommakeyup
 .block
-    lda cbmcommakeylock
-    and #$01
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
 
     jsr slideleft
     lda multimode
@@ -4212,16 +4160,8 @@ handlecbmcommakeyup
 .bend
 
 handlecbmperiodkeydown
-    lda cbmperiodkeylock
-    ora #$01
-    sta cbmperiodkeylock
-    rts
-handlecbmperiodkeyup
 .block
-    lda cbmperiodkeylock
-    and #$01
-    bne *+3
-    rts
+    #handlekeytimer functiontimer
 
     jsr slideright
     lda multimode

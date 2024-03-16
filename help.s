@@ -7,6 +7,31 @@ reset = $fffc
 ;------------------------------------------------
 ;------------------------------------------------
 
+scroll2chapter .macro
+    lda #<\1
+    sta dataaddr
+    lda #>\1
+    sta dataaddr+1
+
+    lda dataaddr+1
+    cmp #>(helptxtend-1000)
+    bmi macroend
+    bpl correct
+    lda dataaddr
+    cmp #<(helptxtend-1000)
+    bmi macroend
+correct
+    lda #<(helptxtend-1000)
+    sta dataaddr
+    lda #>(helptxtend-1000)
+    sta dataaddr+1
+macroend
+    jsr printscreen
+.endm
+
+;------------------------------------------------
+;------------------------------------------------
+
     *=$801
     
 basicstart
@@ -65,7 +90,51 @@ nomodifiers
     and #%10000000
     bne *+5
     jsr reset
+
+    lda $dc01
+    and #%00000001
+    bne *+5
+    jsr scrollchapter1
+
+    lda $dc01
+    and #%00001000
+    bne *+5
+    jsr scrollchapter2
     
+    lda #%11101111 ;4
+    sta $dc00
+
+    lda $dc01
+    and #%00001000
+    bne *+5
+    jsr scrollchapter0
+
+    lda #%11111011 ;2
+    sta $dc00
+
+    lda $dc01
+    and #%00001000
+    bne *+5
+    jsr scrollchapter6
+
+    lda $dc01
+    and #%00000001
+    bne *+5
+    jsr scrollchapter5
+
+    lda #%11111101 ;1
+    sta $dc00
+
+    lda $dc01
+    and #%00001000
+    bne *+5
+    jsr scrollchapter4
+
+    lda $dc01
+    and #%00000001
+    bne *+5
+    jsr scrollchapter3
+
     lda #%11111110 ;0
     sta $dc00
     
@@ -90,6 +159,34 @@ funcend
     rts
 .bend
 
+scrollchapter0
+    #scroll2chapter chapter0
+    rts
+
+scrollchapter1
+    #scroll2chapter chapter1
+    rts
+
+scrollchapter2
+    #scroll2chapter chapter2
+    rts
+
+scrollchapter3
+    #scroll2chapter chapter3
+    rts
+
+scrollchapter4
+    #scroll2chapter chapter4
+    rts
+
+scrollchapter5
+    #scroll2chapter chapter5
+    rts
+
+scrollchapter6
+    #scroll2chapter chapter6
+    rts
+
 scrolldown
 .block
     lda dataaddr
@@ -101,7 +198,9 @@ scrolldown
     
     lda dataaddr+1
     cmp #>(helptxtend-1000)
+    beq *+6
     bmi funcend
+    bpl correct
     lda dataaddr
     cmp #<(helptxtend-1000)
     bmi funcend
@@ -127,8 +226,9 @@ scrollup
     
     lda dataaddr+1
     cmp #>helptxt
-    beq *+4
+    beq *+6
     bpl funcend
+    bmi correct
     lda dataaddr
     cmp #<helptxt
     bpl funcend
@@ -292,7 +392,10 @@ helptxt
     .screen "[run/stop] to quit [crsr down] to scroll"
     .screen "                                        "
     .screen "                                        "
+chapter0
     .screen " ========= table of contents ========== "
+    .screen "                                        "
+    .screen "[0] table of contents                   "
     .screen "                                        "
     .screen "[1] drawing                             "
     .screen "                                        "
@@ -307,6 +410,7 @@ helptxt
     .screen "[6] miscellaneous                       "
     .screen "                                        "
     .screen "                                        "
+chapter1
     .screen " ============= drawing ================ "
     .screen "                                        "
     .screen "[joystick directions] or [crsr] to move "
@@ -324,6 +428,7 @@ helptxt
     .screen "place of cursor.                        "
     .screen "                                        "
     .screen "                                        "
+chapter2
     .screen " ========== changing colors =========== "
     .screen "                                        "
     .screen "[1] to choose main sprite color.        "
@@ -358,7 +463,13 @@ helptxt
     .screen "color.                                  "
     .screen "                                        "
     .screen "                                        "
+chapter3
     .screen " ========= advanced editing =========== "
+    .screen "                                        "
+    .screen "[cbm+space] to make floodfill aka ms    "
+    .screen "                                        "
+    .screen "paints paint bucket.                    "
+    .screen "                                        "
     .screen "                                        "
     .screen "[m] to switch on/off multicolor mode.   "
     .screen "                                        "
@@ -373,6 +484,11 @@ helptxt
     .screen "                                        "
     .screen "current sprite.                         "
     .screen "                                        "
+    .screen "                                        "
+    .screen "following commands also affects         "
+    .screen "-------------------------------         "
+    .screen "clipboard as their backbuffer:          "
+    .screen "------------------------------          "
     .screen "                                        "
     .screen "[f] to flip current sprite horizontally."
     .screen "                                        "
@@ -394,6 +510,7 @@ helptxt
     .screen "[cbm+@] to slide sprite up.             "
     .screen "                                        "
     .screen "                                        "
+chapter4
     .screen " ===== moving around and preview ====== "
     .screen "                                        "
     .screen "[+] or [-] to change address fo current "
@@ -416,6 +533,7 @@ helptxt
     .screen "overlaying sprites.                     "
     .screen "                                        "
     .screen "                                        "
+chapter5
     .screen " ======== saving and loading ========== "
     .screen "                                        "
     .screen "[cbm+l] to load file from diskette.     "
@@ -431,6 +549,7 @@ helptxt
     .screen "[cbm+d] to display disk directory.      "
     .screen "                                        "
     .screen "                                        "
+chapter6
     .screen " ========== miscellaneous ============= "
     .screen "                                        "
     .screen "[cbm+q] to quit / return to basic.      "
