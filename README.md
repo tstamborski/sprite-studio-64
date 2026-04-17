@@ -1,6 +1,8 @@
 # ![](https://github.com/tstamborski/pixelart-icons/blob/main/png/commodore-tool32.png) Sprite Studio 64
 Native sprite editor for Commodore 64. Pocket knife among sprite editors.
 
+*Psst! This is a native editor for the C64 itself. If you are looking for the __more modern tool to edit C64 sprites__ - checkout my other project [__Master of Sprites__](https://github.com/tstamborski/master-of-sprites).*
+
 ## Screenshots
 ![Screenshot 1](screenshot0.png)
 ![Screenshot 2](screenshot1.png)
